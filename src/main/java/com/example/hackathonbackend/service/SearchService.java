@@ -1,34 +1,44 @@
 package com.example.hackathonbackend.service;
 
 import com.example.hackathonbackend.dto.LocationResponseDto;
+import com.example.hackathonbackend.dto.SearchRequestDto;
+import com.example.hackathonbackend.dto.SearchResponseDto;
 import com.example.hackathonbackend.model.Location;
 import com.example.hackathonbackend.model.PlaceResult;
 import com.example.hackathonbackend.model.PlaceResultItem;
+import com.example.hackathonbackend.model.SearchHistory;
+import com.example.hackathonbackend.model.User;
 import com.example.hackathonbackend.repository.LocationRepository;
 import com.example.hackathonbackend.repository.PlaceResultItemRepository;
 import com.example.hackathonbackend.repository.PlaceResultRepository;
+import com.example.hackathonbackend.repository.SearchHistoryRepository;
+import com.example.hackathonbackend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class SearchService {
 
-    private static final long SYSTEM_USER_ID = 0L; // 로그인 붙기 전 임시 유저
+    private static final long SYSTEM_USER_ID = 0L; // 로그인 전 임시 유저
 
     private final LocationRepository locationRepository;
     private final PlaceResultRepository placeResultRepository;
     private final PlaceResultItemRepository placeResultItemRepository;
+    private final SearchHistoryRepository searchHistoryRepository;
+    private final UserRepository userRepository;
 
     // 문자열 안전 트림
     private static String safeTrim(String s, int max) {
         if (s == null) return null;
         return s.length() > max ? s.substring(0, max) : s;
     }
+
     // Double 널 → 기본값
     private static Double safeDouble(Double v, double fallback) {
         return v != null ? v : fallback;
@@ -36,31 +46,24 @@ public class SearchService {
 
     /**
      * 장소 검색 결과 저장 (places upsert + place_results 1줄 + place_result_items)
-     * @param userId    없으면 0번 시스템 유저로 저장
-     * @param places    LocationService 결과
-     * @param mainCount 메인 섹션 개수 (앞 N개)
-     * @return result_id
      */
     @Transactional
     public Long saveSearchResult(Long userId, List<LocationResponseDto> places, int mainCount) {
         if (userId == null) userId = SYSTEM_USER_ID;
 
-        // 1) 실행 결과 묶음
         PlaceResult result = placeResultRepository.save(
                 PlaceResult.builder().userId(userId).build()
         );
 
-        // 2) places upsert & items insert
         int rank = 1;
         for (int i = 0; i < places.size(); i++) {
             LocationResponseDto dto = places.get(i);
 
-            // upsert (google_place_id 기준)
             Location loc = locationRepository.findByGooglePlaceId(dto.getGooglePlaceId())
                     .map(existing -> {
                         existing.setName(safeTrim(dto.getName(), 255));
                         existing.setCategory(safeTrim(dto.getCategory(), 100));
-                        existing.setAddress(safeTrim(dto.getAddress(), 255)); // 길이 초과 방지
+                        existing.setAddress(safeTrim(dto.getAddress(), 255));
                         existing.setLat(safeDouble(dto.getLat(), 0.0));
                         existing.setLng(safeDouble(dto.getLng(), 0.0));
                         existing.setRating(dto.getRating());
@@ -93,7 +96,6 @@ public class SearchService {
                 );
 
             } catch (DataIntegrityViolationException e) {
-                // 어떤 값에서 터졌는지 빠르게 보기 위한 최소 로그
                 System.err.printf(
                         "[places upsert 실패] gpid=%s, name.len=%s, addr.len=%s, category.len=%s%n",
                         dto.getGooglePlaceId(),
@@ -106,5 +108,40 @@ public class SearchService {
         }
 
         return result.getResultId();
+    }
+
+    /**
+     * 사용자 검색 처리 및 추천 기능
+     */
+    @Transactional
+    public SearchResponseDto searchLocation(SearchRequestDto request) {
+        User user = userRepository.findByKakaoId(request.getKakaoId());
+        if (user == null) {
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
+        }
+
+        SearchHistory history = new SearchHistory(
+                user,
+                request.getQuery(),
+                null // locationInfo는 나중에 LocationService 호출 후 채움
+        );
+        searchHistoryRepository.save(history);
+
+        List<SearchHistory> recentHistory = searchHistoryRepository
+                .findTop10ByUserOrderByCreatedAtDesc(user);
+
+        List<String> recommendedPlaces = new ArrayList<>();
+        for (SearchHistory h : recentHistory) {
+            if (!h.getKeyword().equals(request.getQuery())) {
+                recommendedPlaces.add(h.getKeyword());
+            }
+        }
+
+        SearchResponseDto response = new SearchResponseDto();
+        response.setKeyword(request.getQuery());
+        response.setRecommendedPlaces(recommendedPlaces);
+        response.setMessage("검색 완료");
+
+        return response;
     }
 }
