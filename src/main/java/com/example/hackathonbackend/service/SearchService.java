@@ -17,6 +17,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -143,5 +149,55 @@ public class SearchService {
         response.setMessage("검색 완료");
 
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocationResponseDto> pickExtras(Long resultId, int limit) {
+        var items = placeResultItemRepository
+                .pickRandomExtrasByResultId(resultId, PageRequest.of(0, limit));
+
+        if (items.isEmpty()) return List.of();
+
+        // place_id 모아서 Location 일괄 조회
+        List<Long> placeIds = items.stream()
+                .map(PlaceResultItem::getPlaceId)
+                .distinct()
+                .toList();
+
+        Map<Long, Location> locationMap = locationRepository.findAllById(placeIds)
+                .stream()
+                .collect(Collectors.toMap(Location::getPlaceId, l -> l));
+
+        // 엔티티 -> DTO 매핑
+        return items.stream()
+                .map(it -> locationMap.get(it.getPlaceId()))
+                .filter(Objects::nonNull)
+                .map(this::toLocationDto)
+                .toList();
+    }
+
+    // (선택) userId만 받는 버전이 필요하면 같이 추가
+    @Transactional(readOnly = true)
+    public List<LocationResponseDto> pickExtrasForUser(Long userId, int limit) {
+        var latest = placeResultRepository
+                .findTopByUserIdOrderByCreatedAtDesc(userId)
+                .orElseThrow(() -> new IllegalArgumentException("최근 검색 기록이 없습니다."));
+        Long resultId = latest.getResultId();  // 엔티티에 따라 getId()일 수도 있음
+        return pickExtras(resultId, limit);
+    }
+
+    /** 엔티티 → DTO 변환기 (이미 있으면 '중복 정의' 안 되게 이 버전으로 교체) */
+    private LocationResponseDto toLocationDto(Location loc) {
+        return LocationResponseDto.builder()
+                .googlePlaceId(loc.getGooglePlaceId())
+                .name(loc.getName())
+                .category(loc.getCategory())
+                .address(loc.getAddress())
+                .lat(loc.getLat())
+                .lng(loc.getLng())
+                .rating(loc.getRating())
+                .userRatingsTotal(loc.getUserRatingsTotal())
+                .photoUrl(loc.getPhotoUrl())   // DTO: photoUrl, 엔티티: photoUrl
+                .build();
     }
 }

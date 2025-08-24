@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -53,5 +55,26 @@ public class SearchController {
     public ResponseEntity<SearchResponseDto> search(@RequestBody SearchRequestDto request) {
         SearchResponseDto response = searchService.searchLocation(request);
         return ResponseEntity.ok(response);
+    }
+
+
+
+    @GetMapping("/extras")
+    public ResponseEntity<List<LocationResponseDto>> extras(
+            @RequestParam(required = false) Long resultId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(defaultValue = "3") int limit
+    ) {
+        int capped = Math.max(1, Math.min(limit, 10)); // 1~10개 제한
+
+        if (resultId == null && userId == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<LocationResponseDto> picks = (resultId != null)
+                ? searchService.pickExtras(resultId, capped)
+                : searchService.pickExtrasForUser(userId, capped);
+
+        return ResponseEntity.ok(picks);
     }
 }
