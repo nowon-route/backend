@@ -3,21 +3,27 @@ package com.example.hackathonbackend.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "users")  // ✅ DB 테이블명과 동일하게
+@Table(name = "users")  // DB 테이블명과 동일하게
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")   // ✅ DB 컬럼명 맞추기
+    @Column(name = "user_id")  // DB 컬럼명 맞추기
     private Long id;
 
     @Column(name = "kakao_id", nullable = false, unique = true)
     private String kakaoId;
 
     @Column(name = "name", nullable = false)
-    private String name;  // ✅ DB에서는 'name' 컬럼
+    private String name;
 
-    public User() {}
+    private String email;
+
+    private String provider; // 예: "kakao", "google"
+
+
+    public User() {
+    }
 
     public User(String kakaoId, String name) {
         this.kakaoId = kakaoId;
@@ -25,12 +31,44 @@ public class User {
     }
 
     // Getter & Setter
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getKakaoId() { return kakaoId; }
-    public void setKakaoId(String kakaoId) { this.kakaoId = kakaoId; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getKakaoId() {
+        return kakaoId;
+    }
+
+    public void setKakaoId(String kakaoId) {
+        this.kakaoId = kakaoId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
 }
+
