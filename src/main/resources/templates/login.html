@@ -1,0 +1,104 @@
+<!--login.html-->
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .signup-container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h2 {
+            margin-bottom: 24px;
+            text-align: center;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #494949;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #494949;
+        }
+
+        .kakao-login-button {
+            background: #FEE500;
+            color: #3C1E1E;
+            border: none;
+            border-radius: 8px;
+            height: 40px;
+            width: 220px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .kakao-login-button:hover {
+            background: #fcd200;
+        }
+    </style>
+</head>
+<body>
+<div class="signup-container">
+    <h2>NowOnRoute</h2>
+    <div th:if="${error}">
+        <h4 th:text="${error}" style="color:red;"></h4>
+
+    </div>
+<!--  아이디로 로그인 하는 탭 (이 프로젝트에서 필요 X) <form action="/login" method="POST">-->
+<!--        <input name="username" placeholder="아이디" required>-->
+<!--        <input name="password" type="password" placeholder="비밀번호" required>-->
+<!--        <button type="submit">로그인</button>-->
+<!--    </form>-->
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="/OAuth2/kakao/login">
+            <button type="button" class="kakao-login-button">카카오로 로그인</button>
+        </a>
+    </div>
+    <!-- 회원가입 탭 (이 프로젝트에서 필요 X)-->
+<!--    <div style="margin-top: 20px; text-align: center;">-->
+<!--        <a href="/register">-->
+<!--            <button type="button" class="kakao-login-button">회원가입</button>-->
+<!--        </a>-->
+<!--    </div>-->
+</div>
+</body>
+</html>

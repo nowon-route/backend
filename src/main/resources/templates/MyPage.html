@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOW on ROUTE - 마이페이지</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body{font-family:'Inter','Pretendard',sans-serif;color:#111;background:#fff}
+        .input{width:100%;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px}
+        .btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 12px;font-weight:700}
+        .btn-primary{background:#00A651;color:#fff}.btn-primary:hover{background:#008f47}
+        .btn-ghost{background:#f6f7f8}.btn-ghost:hover{background:#eef0f2}
+        .chip{padding:8px 12px;border-radius:999px;background:#fff8ec;border:1px solid #ffd9a1;color:#f59f0b;font-weight:700}
+        .card{background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+        .thumb{width:96px;height:72px;border-radius:10px;object-fit:cover}
+        .badge-green{background:#e7f8ee;color:#0f9d58;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:800}
+        .pagination-item{width:36px;height:36px;display:flex;justify-content:center;align-items:center;border-radius:8px;cursor:pointer}
+        .pagination-item.active{background:#00A651;color:#fff}
+        .ring-amber-300{box-shadow:0 0 0 2px #fcd34d inset}
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="sticky top-0 z-40 bg-white h-14 flex items-center px-4 border-b border-gray-100">
+    <div class="flex items-center justify-between w-full">
+        <div class="flex items-center cursor-pointer" onclick="window.location.href='/'">
+            <span class="text-lg font-extrabold" style="color:#00A651;">NOW on ROUTE</span>
+        </div>
+
+        <div class="hidden md:flex flex-1 max-w-md mx-4">
+            <div class="relative w-full">
+                <input id="globalSearch" type="text" placeholder="태릉입구의 카페 추천"
+                       class="w-full bg-gray-100 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-green-500">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.href='/MyPage'">
+            <div class="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+                <img th:src="${member != null and member.profileImageUrl != null and !#strings.isEmpty(member.profileImageUrl)
+                      ? member.profileImageUrl
+                      : 'https://placehold.co/80x80?text=User'}"
+                     alt="프로필" class="w-full h-full object-cover">
+            </div>
+            <div class="hidden md:block text-right">
+                <div class="text-sm font-bold"
+                     th:text="${member != null and member.displayName != null ? member.displayName : '게스트'}">게스트</div>
+                <div class="text-xs text-gray-500">마이페이지</div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Search -->
+<div class="md:hidden px-4 py-2">
+    <div class="relative">
+        <input id="mobileSearch" type="text" placeholder="태릉입구의 카페 추천"
+               class="w-full bg-gray-100 rounded-full py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-green-500">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+    </div>
+</div>
+
+<!-- Main -->
+<main class="px-4 py-6 md:px-16 md:py-10 bg-white">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Left : Profile card -->
+        <aside class="lg:col-span-1">
+            <div class="card p-6 flex flex-col items-center gap-4">
+                <div class="w-40 h-40 rounded-full bg-gray-100 overflow-hidden shadow">
+                    <img th:src="${member != null and member.profileImageUrl != null and !#strings.isEmpty(member.profileImageUrl)
+                        ? member.profileImageUrl
+                        : 'https://placehold.co/160x160?text=User'}"
+                         alt="프로필 이미지" class="w-full h-full object-cover">
+                </div>
+                <h3 class="text-xl font-extrabold"
+                    th:text="${member != null and member.displayName != null ? member.displayName : '로그인 필요'}">로그인 필요</h3>
+            </div>
+        </aside>
+
+        <!-- Right : Saved items area -->
+        <section class="lg:col-span-3">
+            <div class="card p-5">
+
+                <!-- Title & actions -->
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h2 class="text-lg font-extrabold">내가 저장한 항목</h2>
+                    <div class="flex gap-2">
+                        <button class="btn btn-ghost" type="button" id="btnCheckAll">
+                            <i class="fa-regular fa-square-check"></i> 전체선택
+                        </button>
+
+                        <!-- 폴더 만들기: 모달 열기 -->
+                        <button class="btn btn-ghost" type="button"
+                                onclick="document.getElementById('createFolderModal').classList.remove('hidden')">
+                            <i class="fa-regular fa-folder-open"></i> 폴더 만들기
+                        </button>
+
+                        <a class="btn btn-ghost" href="#" role="button"><i class="fa-solid fa-share-nodes"></i> 공유하기</a>
+                        <a class="btn btn-ghost" href="#" role="button"><i class="fa-regular fa-trash-can"></i> 삭제</a>
+                    </div>
+                </div>
+
+                <!-- Folder chips (엔티티 기반) -->
+                <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <a th:href="@{/MyPage}" class="chip"
+                       th:classappend="${param.folderId == null} ? ' ring-amber-300' : ''">전체</a>
+
+                    <a th:each="f : ${folders}"
+                       th:href="@{/MyPage(folderId=${f.id})}"
+                       class="chip"
+                       th:classappend="${param.folderId != null and #strings.toString(param.folderId) == #strings.toString(f.id)} ? ' ring-amber-300' : ''"
+                       th:text="${f.name}">폴더</a>
+
+                    <div th:if="${folders == null or #lists.isEmpty(folders)}" class="text-sm text-gray-500">
+                        폴더가 없습니다. 먼저 폴더를 만들어보세요.
+                    </div>
+                </div>
+
+                <!-- 선택 항목 폴더 이동 (일괄) -->
+                <div class="flex flex-wrap items-center gap-2 mb-4">
+                    <form th:action="@{/MyPage/saved/bulk-assign}" method="post" id="bulkAssignForm">
+                        <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                        <select name="folderId" class="input !w-auto" required>
+                            <option th:each="f : ${folders}" th:value="${f.id}" th:text="${f.name}"></option>
+                        </select>
+                        <button class="btn btn-ghost" type="submit">이동</button>
+                    </form>
+                </div>
+
+                <div class="border-t border-gray-200 my-3"></div>
+
+                <!-- Saved item cards -->
+                <div class="space-y-3">
+                    <div th:if="${savedItems == null or #lists.isEmpty(savedItems)}" class="text-sm text-gray-500 py-6 text-center">
+                        아직 저장한 항목이 없습니다.
+                    </div>
+
+                    <article th:each="item : ${savedItems}"
+                             class="flex gap-3 p-3 border border-gray-200 rounded-xl hover:shadow-sm transition">
+
+                        <!-- 체크박스(일괄 이동용) -->
+                        <input type="checkbox" class="mt-2 item-check" th:value="${item.id}" />
+
+                        <!-- 썸네일 -->
+                        <a th:href="${item.link}" class="block">
+                            <img th:src="${item.imageUrl != null and !#strings.isEmpty(item.imageUrl) ? item.imageUrl : 'https://placehold.co/192x144?text=IMG'}"
+                                 alt="썸네일" class="thumb">
+                        </a>
+
+                        <!-- 본문 -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="badge-green" th:text="${item.badge != null ? item.badge : '공개'}">공개</span>
+                                    <a th:href="${item.link}" class="font-extrabold hover:underline truncate"
+                                       th:text="${item.title != null ? item.title : '제목 없음'}">제목 없음</a>
+                                </div>
+
+                                <div class="shrink-0 flex gap-2 text-gray-500">
+                                    <a th:href="@{|/saved/${item.id}/share|}" class="hover:text-gray-800"><i class="fa-solid fa-share-nodes"></i></a>
+                                    <a th:href="@{|/saved/${item.id}/edit|}" class="hover:text-gray-800"><i class="fa-regular fa-pen-to-square"></i></a>
+                                    <form th:action="@{|/saved/${item.id}/delete|}" method="post" class="inline">
+                                        <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                        <button class="hover:text-red-600" title="삭제" type="submit"><i class="fa-regular fa-trash-can"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <p class="text-gray-600 text-sm mt-1 line-clamp-2"
+                               th:text="${item.description != null ? item.description : '설명이 없습니다.'}">
+                                설명이 없습니다.
+                            </p>
+
+                            <div class="flex flex-wrap items-center gap-4 text-gray-500 text-xs mt-2">
+                                <span th:text="${item.meta != null ? item.meta : '카테고리 · 지역 정보'}">카테고리 · 지역 정보</span>
+                                <span th:if="${item.updatedAt != null}" th:text="${#dates.format(item.updatedAt,'yyyy.MM.dd')}">2025.08.19</span>
+                            </div>
+
+                            <!-- 개별 폴더 저장 -->
+                            <div class="flex items-center gap-2 mt-3">
+                                <form th:action="@{|/MyPage/saved/${item.id}/assign|}" method="post" class="flex items-center gap-2">
+                                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                                    <select name="folderId" class="input !w-auto" required>
+                                        <option value="" disabled selected>폴더 선택</option>
+                                        <option th:each="f : ${folders}" th:value="${f.id}" th:text="${f.name}">폴더</option>
+                                    </select>
+                                    <button class="btn btn-primary" type="submit">저장</button>
+                                </form>
+
+                                <!-- 이미 배정된 폴더들(문자열 리스트를 표시용으로 내려줌) -->
+                                <div class="flex flex-wrap gap-1" th:if="${item.folders != null}">
+                                    <span th:each="ff : ${item.folders}" class="badge-green" th:text="${ff}">부모님과 갈 곳</span>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex justify-center gap-1 mt-5" th:if="${page != null}">
+                    <a class="pagination-item hover:bg-gray-100" th:if="${!page.first}"
+                       th:href="@{/MyPage(page=${page.number-1}, folderId=${param.folderId})}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+
+                    <a th:each="i : ${#numbers.sequence(1, page.totalPages)}"
+                       class="pagination-item hover:bg-gray-100"
+                       th:classappend="${i-1 == page.number} ? ' active' : ''"
+                       th:href="@{/MyPage(page=${i-1}, folderId=${param.folderId})}"
+                       th:text="${i}">1</a>
+
+                    <a class="pagination-item hover:bg-gray-100" th:if="${!page.last}"
+                       th:href="@{/MyPage(page=${page.number+1}, folderId=${param.folderId})}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- Edit Profile Modal -->
+<div id="editModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="mx-auto mt-24 w-[92%] max-w-md card p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-extrabold">프로필 수정</h3>
+            <button class="text-gray-500 hover:text-black"
+                    onclick="document.getElementById('editModal').classList.add('hidden')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form th:action="@{/MyPage/profile}" method="post" class="space-y-3">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <label class="block">
+                <span class="text-sm">표시 이름</span>
+                <input class="input" type="text" name="displayName"
+                       th:value="${member != null ? member.displayName : ''}">
+            </label>
+
+            <label class="block">
+                <span class="text-sm">자기소개</span>
+                <textarea class="input" name="intro" rows="3"
+                          th:text="${member != null ? member.intro : ''}"></textarea>
+            </label>
+
+            <label class="block">
+                <span class="text-sm">프로필 이미지 URL</span>
+                <input class="input" type="text" name="profileImageUrl"
+                       th:value="${member != null ? member.profileImageUrl : ''}">
+            </label>
+
+            <button type="submit" class="btn btn-primary w-full">저장</button>
+        </form>
+    </div>
+</div>
+
+<!-- Create Folder Modal -->
+<div id="createFolderModal" class="fixed inset-0 bg-black/50 hidden z-50">
+    <div class="mx-auto mt-24 w-[92%] max-w-md card p-5">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-extrabold">폴더 만들기</h3>
+            <button class="text-gray-500 hover:text-black"
+                    onclick="document.getElementById('createFolderModal').classList.add('hidden')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form th:action="@{/MyPage/folders}" method="post" class="space-y-3">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label class="block">
+                <span class="text-sm">폴더 이름</span>
+                <input class="input" type="text" name="name" placeholder="예) 부모님과 갈 곳" required maxlength="30">
+            </label>
+            <button type="submit" class="btn btn-primary w-full">생성</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // 검색 엔터 이동
+    function handleSearch(e){
+        if(e.key==='Enter'){
+            const q=e.target.value.trim();
+            if(q) location.href='/search?q='+encodeURIComponent(q);
+        }
+    }
+    document.getElementById('globalSearch')?.addEventListener('keypress', handleSearch);
+    document.getElementById('mobileSearch')?.addEventListener('keypress', handleSearch);
+
+    // 전체 선택 토글
+    const btnCheckAll = document.getElementById('btnCheckAll');
+    btnCheckAll?.addEventListener('click', ()=>{
+        const boxes = document.querySelectorAll('.item-check');
+        const allChecked = Array.from(boxes).every(ch => ch.checked);
+        boxes.forEach(ch => ch.checked = !allChecked);
+    });
+
+    // 일괄 이동: 체크된 itemIds를 hidden input으로 붙여 전송
+    const bulkForm = document.getElementById('bulkAssignForm');
+    bulkForm?.addEventListener('submit', (e)=>{
+        bulkForm.querySelectorAll('input[name="itemIds"]').forEach(n=>n.remove());
+        const checked = document.querySelectorAll('.item-check:checked');
+        if(checked.length === 0){
+            e.preventDefault();
+            alert('이동할 항목을 선택해주세요.');
+            return;
+        }
+        checked.forEach(ch=>{
+            const hidden = document.createElement('input');
+            hidden.type='hidden';
+            hidden.name='itemIds';
+            hidden.value=ch.value;
+            bulkForm.appendChild(hidden);
+        });
+    });
+</script>
+</body>
+</html>
