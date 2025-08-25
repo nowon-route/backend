@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>일정 만들기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> const API_BASE = 'http://localhost:8080' </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom styles for datepicker */
+        .datepicker-container {
+            position: relative;
+        }
+        .datepicker-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            font-size: 16px;
+        }
+        .datepicker-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        /* Custom styles for textarea */
+        .concept-textarea {
+            min-height: 120px;
+            resize: none;
+            transition: height 0.2s;
+            padding: 14px 16px;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            font-size: 16px;
+            width: 100%;
+        }
+        .concept-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s, fadeOut 0.5s 2.5s forwards;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .toast.warning {
+            background-color: #f59e0b;
+        }
+        .toast.success {
+            background-color: #10b981;
+        }
+        .toast.error {
+            background-color: #ef4444;
+        }
+        
+        @keyframes slideIn {
+            from { top: 0; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* Tab selection styles */
+        .tab-option {
+            flex: 1 0 auto;
+            padding: 10px 12px;
+            text-align: center;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .tab-option:hover {
+            background-color: #e5e7eb;
+        }
+        .tab-option.selected {
+            background-color: #3b82f6;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-white p-4 max-w-md mx-auto">
+    <div class="flex flex-col gap-12">
+        <h1 class="text-2xl font-bold text-gray-800">Now on route MVP</h1>
+        
+        <!-- Date Picker -->
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">여행 날짜</label>
+            <div class="datepicker-container">
+                <input type="date" id="tripDate" class="datepicker-input" required>
+            </div>
+        </div>
+        
+        <!-- Companion Tabs -->
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">누구와 함께 가나요?</label>
+            <div class="flex flex-wrap gap-2">
+                <div class="tab-option" data-value="혼자">혼자</div>
+                <div class="tab-option" data-value="가족">가족</div>
+                <div class="tab-option" data-value="부모님">부모님</div>
+                <div class="tab-option" data-value="연인">연인</div>
+                <div class="tab-option" data-value="동료">동료</div>
+                <div class="tab-option" data-value="모임">모임</div>
+                <div class="tab-option" data-value="단체">단체</div>
+                <div class="tab-option" data-value="아이와 함께">아이와 함께</div>
+                <div class="tab-option" data-value="반려동물">반려동물</div>
+            </div>
+            <input type="hidden" id="companion" required>
+        </div>
+        
+        <!-- Concept Textarea -->
+        <div>
+            <label class="block text-gray-700 font-medium mb-2">여행 컨셉</label>
+            <textarea id="concept" class="concept-textarea" placeholder="예) 조용한 카페 + 바닷가 드라이브, 저녁은 현지 맛집 ..." maxlength="500"></textarea>
+            <div class="text-right text-sm text-gray-500 mt-1">
+                <span id="charCount">0</span>/500
+            </div>
+        </div>
+        
+        <!-- Submit Button -->
+        <button id="createBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-4 px-6 rounded-3xl shadow-md transition duration-200 sticky bottom-4">
+            일정 만들기
+        </button>
+    </div>
+
+    <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // 프리필
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0];
+    document.getElementById('tripDate').value = formattedDate;
+    document.getElementById('concept').value = "감성 카페 투어 + 강변 산책 + 야경 포인트 사진";
+
+    // 기본 선택: 연인
+    const loverTab = document.querySelector('.tab-option[data-value="연인"]');
+    if (loverTab) {
+      loverTab.classList.add('selected');
+      document.getElementById('companion').value = "연인";
+    }
+
+    // 글자수/오토그로우
+    const conceptTextarea = document.getElementById('concept');
+    const charCount = document.getElementById('charCount');
+    conceptTextarea.addEventListener('input', function () {
+      charCount.textContent = this.value.length;
+      this.style.height = 'auto';
+      this.style.height = this.scrollHeight + 'px';
+    });
+    conceptTextarea.dispatchEvent(new Event('input'));
+
+    // 탭 선택
+    const tabOptions = document.querySelectorAll('.tab-option');
+    tabOptions.forEach(option => {
+      option.addEventListener('click', function () {
+        tabOptions.forEach(opt => opt.classList.remove('selected'));
+        this.classList.add('selected');
+        document.getElementById('companion').value = this.dataset.value;
+      });
+    });
+
+    // 제출 버튼
+    const createBtn = document.getElementById('createBtn');
+    createBtn.addEventListener('click', async function () {
+      const tripDate = document.getElementById('tripDate').value;
+      const companion = document.getElementById('companion').value;
+      const concept = document.getElementById('concept').value;
+
+      if (!tripDate || !companion) {
+        showToast('날짜와 동행 정보를 선택해주세요.', 'warning');
+        return;
+      }
+
+      try {
+        createBtn.disabled = true;
+        createBtn.textContent = '생성 중...';
+
+        const res = await fetch(`${API_BASE}/api/itineraries`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: tripDate, companion, concept })
+        });
+
+        if (!res.ok) throw new Error(`API 실패: ${res.status}`);
+
+        const data = await res.json(); // { id, itinerary }
+        showToast('일정이 생성되었습니다!', 'success');
+
+        setTimeout(() => {
+          window.location.href = `itinerary.html?id=${data.id}`;
+        }, 600);
+      } catch (err) {
+        console.error(err);
+        showToast('생성에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error');
+      } finally {
+        createBtn.disabled = false;
+        createBtn.textContent = '일정 만들기';
+      }
+    });
+
+    // 토스트
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+  });
+</script>
+</body>
+</html>
