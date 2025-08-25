@@ -4,6 +4,8 @@ package com.example.hackathonbackend.controller;
 import com.example.hackathonbackend.dto.DispatchRequest;
 import com.example.hackathonbackend.dto.KeywordRequest;
 import com.example.hackathonbackend.service.ItineraryService;
+import com.example.hackathonbackend.dto.*;
+import com.example.hackathonbackend.service.ItineraryPlannerService; // 기존 키워드 기능 유지
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,8 +19,13 @@ import java.util.Map;
 @RequestMapping("/api/itineraries")
 public class ItineraryController {
 
+    private final ItineraryPlannerService plannerService;     // 신규: plan
     private final ItineraryService itineraryService;
 
+    /** [신규] 지도API places + 조건 → GPT 코스 플래너 */
+    @PostMapping("/plan")
+    public ResponseEntity<ItineraryResponse> plan(@Valid @RequestBody PlanRequest req) {
+        return ResponseEntity.ok(plannerService.plan(req));
     /**
      * [2번] GPT 키워드 생성 (프론트 호출용)
      * POST /api/itineraries/keywords
