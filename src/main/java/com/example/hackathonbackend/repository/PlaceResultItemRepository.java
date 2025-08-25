@@ -11,7 +11,6 @@ import java.util.List;
 
 public interface PlaceResultItemRepository extends JpaRepository<PlaceResultItem, Long> {
 
-    // MySQL: RAND(), PostgreSQL: RANDOM()
     @Query(value = """
         SELECT *
         FROM place_result_items

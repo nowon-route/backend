@@ -186,7 +186,6 @@ public class SearchService {
         return pickExtras(resultId, limit);
     }
 
-    /** 엔티티 → DTO 변환기 (이미 있으면 '중복 정의' 안 되게 이 버전으로 교체) */
     private LocationResponseDto toLocationDto(Location loc) {
         return LocationResponseDto.builder()
                 .googlePlaceId(loc.getGooglePlaceId())

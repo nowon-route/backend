@@ -39,6 +39,6 @@ public class Location {
     private Integer userRatingsTotal;
 
     @Lob
-    @Column(name = "photo_url")
+    @Column(name = "photo_url",columnDefinition = "TEXT")
     private String photoUrl;
 }
